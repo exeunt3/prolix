@@ -6,5 +6,9 @@
     "start": "npm --prefix mobile run start",
     "android": "npm --prefix mobile run android",
     "ios": "npm --prefix mobile run ios"
+  },
+  "dependencies": {
+    "expo": "^55.0.2",
+    "expo-dev-client": "~55.0.9"
   }
 }
