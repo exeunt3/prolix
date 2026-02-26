@@ -1,10 +1,15 @@
 from __future__ import annotations
 
 import binascii
+import os
+from pathlib import Path
 
+import httpx
+from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field, field_validator
 
 from app.db.storage import TraceStore
 from app.models import DeepenRequest, GenerateResponse, Hop, TraceRecord, VectorDomain
@@ -18,6 +23,8 @@ from app.services.grounding import (
 from app.services.narration import NarrationService
 from app.services.retrieval import RetrievalService
 
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
+
 app = FastAPI(title="Prolix API", version="0.1.0")
 app.mount("/web-static", StaticFiles(directory="app/static/web"), name="web-static")
 store = TraceStore()
@@ -26,6 +33,22 @@ grounder = GroundingService(provider=grounding_provider)
 retrieval = RetrievalService(corpus_dir="corpus")
 drift = DriftEngine()
 narrator = NarrationService()
+
+
+class AIRespondRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=2000)
+
+    @field_validator("text")
+    @classmethod
+    def text_must_not_be_blank(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("text must not be empty")
+        return normalized
+
+
+class AIRespondResponse(BaseModel):
+    reply: str
 
 
 def _safety_path(anchor: str) -> list[Hop]:
@@ -138,3 +161,43 @@ def deepen(request: DeepenRequest) -> GenerateResponse:
     )
     store.insert_trace(trace)
     return GenerateResponse(paragraph_text=narration.paragraph_text, trace_id=trace.trace_id)
+
+
+@app.post("/api/ai/respond", response_model=AIRespondResponse)
+async def ai_respond(request: AIRespondRequest) -> AIRespondResponse:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=500,
+            detail="OPENAI_API_KEY is missing. Set it in backend/.env before calling /api/ai/respond.",
+        )
+
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    payload = {
+        "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+        "messages": [
+            {"role": "system", "content": "You are a concise assistant."},
+            {"role": "user", "content": request.text},
+        ],
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers=headers,
+                json=payload,
+            )
+        if response.status_code >= 400:
+            raise HTTPException(
+                status_code=502,
+                detail=f"OpenAI request failed with status {response.status_code}.",
+            )
+        body = response.json()
+        reply = body["choices"][0]["message"]["content"].strip()
+    except HTTPException:
+        raise
+    except (httpx.HTTPError, KeyError, ValueError, TypeError):
+        raise HTTPException(status_code=502, detail="Failed to fetch a valid AI reply from OpenAI.")
+
+    return AIRespondResponse(reply=reply)

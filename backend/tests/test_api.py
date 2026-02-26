@@ -1,5 +1,6 @@
 import os
 
+import httpx
 from fastapi.testclient import TestClient
 
 os.environ.setdefault("VISION_GROUNDING_API_KEY", "test-key")
@@ -55,4 +56,40 @@ def test_web_app_shell() -> None:
 
     script_resp = client.get("/web-static/app.js")
     assert script_resp.status_code == 200
-    assert "fetch('/generate'" in script_resp.text
+    assert "fetch('/api/ai/respond'" in script_resp.text
+
+
+def test_ai_respond_missing_key() -> None:
+    previous = os.environ.pop("OPENAI_API_KEY", None)
+    try:
+        resp = client.post("/api/ai/respond", json={"text": "hello"})
+        assert resp.status_code == 500
+        assert "OPENAI_API_KEY is missing" in resp.json()["detail"]
+    finally:
+        if previous is not None:
+            os.environ["OPENAI_API_KEY"] = previous
+
+
+def test_ai_respond_validation() -> None:
+    resp = client.post("/api/ai/respond", json={"text": "   "})
+    assert resp.status_code == 422
+
+
+def test_ai_respond_success(monkeypatch) -> None:
+    os.environ["OPENAI_API_KEY"] = "test-openai-key"
+
+    class MockResponse:
+        status_code = 200
+
+        @staticmethod
+        def json() -> dict[str, object]:
+            return {"choices": [{"message": {"content": "Mock reply"}}]}
+
+    async def mock_post(self, url, headers=None, json=None):
+        return MockResponse()
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", mock_post)
+
+    resp = client.post("/api/ai/respond", json={"text": "Say hi"})
+    assert resp.status_code == 200
+    assert resp.json() == {"reply": "Mock reply"}
