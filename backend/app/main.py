@@ -126,6 +126,10 @@ async def generate(
         except (ValueError, binascii.Error):
             normalized_image_bytes = None
 
+    try:
+        grounding_pack = grounder.build_grounding_pack(image_bytes=normalized_image_bytes, tap_x=tap_x, tap_y=tap_y)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail={"status": "error", "error_type": "missing_grounding_pack", "message": str(exc)}) from exc
     grounding = grounder.ground(normalized_image_bytes, tap_x=tap_x, tap_y=tap_y)
 
     if grounding.safety_face_or_plate:
@@ -147,6 +151,7 @@ async def generate(
             path=concept_path,
             snippets=snippets,
             safety_redirect=grounding.safety_face_or_plate,
+            grounding_pack=grounding_pack,
         )
     except OpenAIClientError as exc:
         if exc.error_type == "openai_401":

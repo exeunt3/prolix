@@ -103,6 +103,54 @@ class GroundingResult(BaseModel):
     safety_face_or_plate: bool = False
 
 
+class GroundingPack(BaseModel):
+    anchor_label: str
+    anchor_description: str
+    anchor_material_guess: str
+    anchor_scene_context: str
+    confidence: float
+    low_confidence: bool = False
+    visual_facts: list[str] = Field(default_factory=list)
+    crop_rect: dict[str, int] = Field(default_factory=dict)
+
+
+class ConceptHop(BaseModel):
+    from_node: str
+    to_node: str
+    relation: str
+
+
+class ConceptPath(BaseModel):
+    chosen_vector_domain: str
+    hop_trace: list[ConceptHop]
+
+
+class RetrievalBundle(BaseModel):
+    fragment_ids: list[str]
+    fragments: list[str]
+
+
+class OutlineHop(BaseModel):
+    from_node: str
+    to_node: str
+    relation: str
+    evidence: str
+
+
+class OutlinePlan(BaseModel):
+    visual_facts_used: list[str]
+    hop_trace: list[OutlineHop]
+    micro_outline: list[str]
+    banned_words_triggered: list[str] = Field(default_factory=list)
+    tone_checks: dict[str, Any] = Field(default_factory=dict)
+
+
+class ProseResult(BaseModel):
+    paragraph_text: str
+    validation_passed: bool
+    violations: list[str] = Field(default_factory=list)
+
+
 class DriftPlan(BaseModel):
     vector_domain: VectorDomain
     concept_path: list[Hop]
