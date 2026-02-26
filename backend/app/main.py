@@ -1,22 +1,28 @@
 from __future__ import annotations
 
 import base64
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 
 from app.db.storage import TraceStore
 from app.models import DeepenRequest, GenerateResponse, Hop, TraceRecord, VectorDomain
+from app.providers import build_text_provider, build_vision_provider
 from app.services.drift import DriftEngine
 from app.services.grounding import GroundingService
 from app.services.narration import NarrationService
 from app.services.retrieval import RetrievalService
+from app.settings import get_settings
 
-app = FastAPI(title="Prolix API", version="0.1.0")
-store = TraceStore()
-grounder = GroundingService()
-retrieval = RetrievalService(corpus_dir="corpus")
-drift = DriftEngine()
-narrator = NarrationService()
+
+@dataclass
+class RuntimeServices:
+    store: TraceStore
+    grounder: GroundingService
+    retrieval: RetrievalService
+    drift: DriftEngine
+    narrator: NarrationService
 
 
 def _safety_path(anchor: str) -> list[Hop]:
@@ -30,6 +36,31 @@ def _safety_path(anchor: str) -> list[Hop]:
     ]
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings = get_settings()
+    validation_errors = settings.validate_provider_secrets()
+    if validation_errors:
+        raise RuntimeError("Invalid backend AI provider configuration: " + " ".join(validation_errors))
+
+    services = RuntimeServices(
+        store=TraceStore(),
+        grounder=GroundingService(provider=build_vision_provider(settings)),
+        retrieval=RetrievalService(corpus_dir="corpus"),
+        drift=DriftEngine(),
+        narrator=NarrationService(provider=build_text_provider(settings)),
+    )
+    app.state.services = services
+    yield
+
+
+app = FastAPI(title="Prolix API", version="0.1.0", lifespan=lifespan)
+
+
+def _services(request: Request) -> RuntimeServices:
+    return request.app.state.services  # type: ignore[no-any-return]
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -37,30 +68,32 @@ def health() -> dict[str, str]:
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(
+    request: Request,
     tap_x: float = Form(...),
     tap_y: float = Form(...),
     image: UploadFile | None = File(default=None),
     image_b64: str | None = Form(default=None),
 ) -> GenerateResponse:
+    services = _services(request)
     encoded = image_b64
     if image is not None:
         payload = await image.read()
         encoded = base64.b64encode(payload).decode("utf-8")
 
-    grounding = grounder.ground(encoded, tap_x=tap_x, tap_y=tap_y)
+    grounding = services.grounder.ground(encoded, tap_x=tap_x, tap_y=tap_y)
 
     if grounding.safety_face_or_plate:
         domain = VectorDomain.FEEDBACK_CONTROL
         concept_path = _safety_path(grounding.object_label)
         dark_flag = False
     else:
-        domain = drift.choose_domain()
-        plan = drift.plan(grounding.object_label, domain, force_safe=False)
+        domain = services.drift.choose_domain()
+        plan = services.drift.plan(grounding.object_label, domain, force_safe=False)
         concept_path = plan.concept_path
         dark_flag = plan.dark_flag
 
-    snippets = retrieval.retrieve(grounding.object_label, domain, k=12)
-    narration = narrator.narrate(
+    snippets = services.retrieval.retrieve(grounding.object_label, domain, k=12)
+    narration = services.narrator.narrate(
         object_label=grounding.object_label,
         descriptors=grounding.scene_descriptors,
         vector_domain=domain,
@@ -77,13 +110,14 @@ async def generate(
         safety_flag=grounding.safety_face_or_plate,
         dark_flag=dark_flag,
     )
-    store.insert_trace(trace)
+    services.store.insert_trace(trace)
     return GenerateResponse(paragraph_text=narration.paragraph_text, trace_id=trace.trace_id)
 
 
 @app.post("/deepen", response_model=GenerateResponse)
-def deepen(request: DeepenRequest) -> GenerateResponse:
-    previous = store.get_trace(request.trace_id)
+def deepen(request: Request, payload: DeepenRequest) -> GenerateResponse:
+    services = _services(request)
+    previous = services.store.get_trace(payload.trace_id)
     if previous is None:
         raise HTTPException(status_code=404, detail="trace_id not found")
 
@@ -95,13 +129,13 @@ def deepen(request: DeepenRequest) -> GenerateResponse:
         concept_path = _safety_path(anchor)
         dark_flag = False
     else:
-        domain = drift.choose_domain(previous=previous.vector_domain)
-        plan = drift.plan(anchor, domain, force_safe=False)
+        domain = services.drift.choose_domain(previous=previous.vector_domain)
+        plan = services.drift.plan(anchor, domain, force_safe=False)
         concept_path = plan.concept_path
         dark_flag = plan.dark_flag
 
-    snippets = retrieval.retrieve(previous.object_label, domain, k=12)
-    narration = narrator.narrate(
+    snippets = services.retrieval.retrieve(previous.object_label, domain, k=12)
+    narration = services.narrator.narrate(
         object_label=previous.object_label,
         descriptors=["carried-over endpoint", "continuation"],
         vector_domain=domain,
@@ -118,5 +152,5 @@ def deepen(request: DeepenRequest) -> GenerateResponse:
         safety_flag=previous.safety_flag,
         dark_flag=dark_flag,
     )
-    store.insert_trace(trace)
+    services.store.insert_trace(trace)
     return GenerateResponse(paragraph_text=narration.paragraph_text, trace_id=trace.trace_id)

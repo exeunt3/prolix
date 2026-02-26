@@ -6,11 +6,13 @@ import imghdr
 from dataclasses import dataclass
 
 from app.models import GroundingResult
+from app.providers import VisionProvider
 
 
 @dataclass
 class GroundingService:
     confidence_threshold: float = 0.45
+    provider: VisionProvider | None = None
 
     def _decode_image(self, image_b64: str) -> bytes:
         candidate = image_b64.strip()
@@ -20,6 +22,14 @@ class GroundingService:
         return base64.b64decode(candidate, validate=False)
 
     def ground(self, image_b64: str | None, tap_x: float, tap_y: float) -> GroundingResult:
+        if self.provider is not None:
+            try:
+                provided = self.provider.analyze(image_b64, tap_x=tap_x, tap_y=tap_y)
+            except Exception:
+                provided = None
+            if provided is not None:
+                return provided
+
         # MVP deterministic placeholder for vision label extraction.
         descriptors = [
             f"tap near x={tap_x:.2f}",

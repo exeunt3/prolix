@@ -3,9 +3,13 @@ from __future__ import annotations
 import random
 
 from app.models import Hop, NarrationResult, RetrievalSnippet, VectorDomain
+from app.providers import TextProvider
 
 
 class NarrationService:
+    def __init__(self, provider: TextProvider | None = None) -> None:
+        self.provider = provider
+
     def narrate(
         self,
         object_label: str,
@@ -15,6 +19,21 @@ class NarrationService:
         snippets: list[RetrievalSnippet],
         safety_redirect: bool = False,
     ) -> NarrationResult:
+        if self.provider is not None:
+            try:
+                provider_text = self.provider.compose(
+                    object_label=object_label,
+                    descriptors=descriptors,
+                    vector_domain=vector_domain,
+                    path=path,
+                    snippets=snippets,
+                    safety_redirect=safety_redirect,
+                )
+            except Exception:
+                provider_text = None
+            if provider_text:
+                return NarrationResult(paragraph_text=self._fit_word_range(provider_text), path_used=path, ending_type="RETURN")
+
         if safety_redirect:
             text = (
                 "At the tapped point, the scene refuses to become a dossier and remains an object among other objects: edge, glare, texture, motion, each one enough to trigger the machinery of recognition without granting it authority. "

@@ -17,6 +17,36 @@ pip install -e .[dev]
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+
+
+### Backend environment configuration
+
+The backend now supports provider-driven runtime configuration for vision grounding and narration.
+
+Required when using real providers (`openai`):
+
+- `VISION_PROVIDER` (`mock` or `openai`)
+- `VISION_MODEL` (for example `gpt-4o-mini`)
+- `VISION_API_KEY` (**required** when `VISION_PROVIDER!=mock`)
+- `VISION_ENDPOINT` (optional custom base URL)
+- `TEXT_PROVIDER` (`mock` or `openai`)
+- `TEXT_MODEL` (for example `gpt-4o-mini`)
+- `TEXT_API_KEY` (**required** when `TEXT_PROVIDER!=mock`)
+- `TEXT_ENDPOINT` (optional custom base URL)
+- `AI_REQUEST_TIMEOUT_SECONDS` (default `20`)
+- `AI_MAX_RETRIES` (default `2`)
+
+Example:
+
+```bash
+export VISION_PROVIDER=openai
+export VISION_MODEL=gpt-4o-mini
+export VISION_API_KEY=sk-...
+export TEXT_PROVIDER=openai
+export TEXT_MODEL=gpt-4o-mini
+export TEXT_API_KEY=sk-...
+```
+
 ## Run backend tests
 
 ```bash
