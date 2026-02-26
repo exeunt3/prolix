@@ -1,3 +1,13 @@
 node_modules
 .env
 backend/.env
+# Python
+.venv/
+venv/
+**/.venv/
+__pycache__/
+*.pyc
+
+# Env files
+.env
+.env.*
