@@ -1,19 +1,25 @@
 from __future__ import annotations
 
-import base64
+import binascii
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
 from app.db.storage import TraceStore
 from app.models import DeepenRequest, GenerateResponse, Hop, TraceRecord, VectorDomain
 from app.services.drift import DriftEngine
-from app.services.grounding import GroundingService
+from app.services.grounding import (
+    GroundingService,
+    OpenAIVisionGroundingProvider,
+    VisionProviderSettings,
+    decode_image_b64,
+)
 from app.services.narration import NarrationService
 from app.services.retrieval import RetrievalService
 
 app = FastAPI(title="Prolix API", version="0.1.0")
 store = TraceStore()
-grounder = GroundingService()
+grounding_provider = OpenAIVisionGroundingProvider(settings=VisionProviderSettings.from_env())
+grounder = GroundingService(provider=grounding_provider)
 retrieval = RetrievalService(corpus_dir="corpus")
 drift = DriftEngine()
 narrator = NarrationService()
@@ -42,12 +48,16 @@ async def generate(
     image: UploadFile | None = File(default=None),
     image_b64: str | None = Form(default=None),
 ) -> GenerateResponse:
-    encoded = image_b64
+    normalized_image_bytes: bytes | None = None
     if image is not None:
-        payload = await image.read()
-        encoded = base64.b64encode(payload).decode("utf-8")
+        normalized_image_bytes = await image.read()
+    elif image_b64:
+        try:
+            normalized_image_bytes = decode_image_b64(image_b64)
+        except (ValueError, binascii.Error):
+            normalized_image_bytes = None
 
-    grounding = grounder.ground(encoded, tap_x=tap_x, tap_y=tap_y)
+    grounding = grounder.ground(normalized_image_bytes, tap_x=tap_x, tap_y=tap_y)
 
     if grounding.safety_face_or_plate:
         domain = VectorDomain.FEEDBACK_CONTROL

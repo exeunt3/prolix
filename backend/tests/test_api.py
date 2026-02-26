@@ -1,4 +1,12 @@
+import os
+
 from fastapi.testclient import TestClient
+
+os.environ.setdefault("VISION_GROUNDING_API_KEY", "test-key")
+os.environ.setdefault("VISION_GROUNDING_MODEL", "test-model")
+os.environ.setdefault("VISION_GROUNDING_ENDPOINT", "http://127.0.0.1:9/v1/responses")
+os.environ.setdefault("VISION_GROUNDING_TIMEOUT_SECONDS", "0.2")
+os.environ.setdefault("VISION_GROUNDING_MAX_RETRIES", "0")
 
 from app.main import app
 
