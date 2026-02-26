@@ -1,12 +1,75 @@
 from __future__ import annotations
 
 import random
+from dataclasses import dataclass
+from typing import Protocol
 
 from app.models import Hop, NarrationResult, RetrievalSnippet, VectorDomain
 
 
-class NarrationService:
+class NarrationProviderClient(Protocol):
     def narrate(
+        self,
+        object_label: str,
+        descriptors: list[str],
+        vector_domain: VectorDomain,
+        path: list[Hop],
+        snippets: list[RetrievalSnippet],
+        safety_redirect: bool,
+        timeout_s: float,
+    ) -> dict:
+        """Return provider response used to build NarrationResult."""
+
+
+@dataclass
+class NarrationService:
+    provider_client: NarrationProviderClient | None = None
+    provider_timeout_s: float = 2.5
+
+    def narrate(
+        self,
+        object_label: str,
+        descriptors: list[str],
+        vector_domain: VectorDomain,
+        path: list[Hop],
+        snippets: list[RetrievalSnippet],
+        safety_redirect: bool = False,
+    ) -> NarrationResult:
+        if self.provider_client is not None:
+            try:
+                response = self.provider_client.narrate(
+                    object_label=object_label,
+                    descriptors=descriptors,
+                    vector_domain=vector_domain,
+                    path=path,
+                    snippets=snippets,
+                    safety_redirect=safety_redirect,
+                    timeout_s=self.provider_timeout_s,
+                )
+                return self._from_provider_response(response=response, path=path)
+            except (TimeoutError, ValueError, TypeError, KeyError):
+                pass
+
+        return self._fallback_narrate(
+            object_label=object_label,
+            descriptors=descriptors,
+            vector_domain=vector_domain,
+            path=path,
+            snippets=snippets,
+            safety_redirect=safety_redirect,
+        )
+
+    def _from_provider_response(self, response: dict, path: list[Hop]) -> NarrationResult:
+        if not isinstance(response, dict):
+            raise TypeError("Provider response must be a dict")
+        paragraph = str(response["paragraph_text"]).strip()
+        ending_type = str(response["ending_type"]).strip() or "RETURN"
+        if not paragraph:
+            raise ValueError("paragraph_text cannot be empty")
+        paragraph = self._fit_word_range(paragraph)
+        return NarrationResult(paragraph_text=paragraph, path_used=path, ending_type=ending_type)
+
+    def _fallback_narrate(
         self,
         object_label: str,
         descriptors: list[str],
