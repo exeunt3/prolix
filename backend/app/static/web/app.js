@@ -56,12 +56,12 @@ imageInput.addEventListener('change', () => {
   const objectUrl = URL.createObjectURL(file);
   preview.src = objectUrl;
   preview.hidden = false;
-  setStatus('Tap a point on the image, then generate.');
+  setStatus('Tap a point, then click Generate.');
 });
 
 preview.addEventListener('click', (event) => {
   placeTapMarker(event.clientX, event.clientY);
-  setStatus('Ready to generate.');
+  setStatus('Point selected. Click Generate.');
 });
 
 generateButton.addEventListener('click', async () => {
