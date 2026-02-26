@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import binascii
+import logging
 import os
 from pathlib import Path
 
@@ -20,10 +21,14 @@ from app.services.grounding import (
     VisionProviderSettings,
     decode_image_b64,
 )
+from app.services.llm_client import OpenAIClientError
 from app.services.narration import NarrationService
 from app.services.retrieval import RetrievalService
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
+DOTENV_PATH = Path(__file__).resolve().parents[1] / ".env"
+if DOTENV_PATH.exists():
+    load_dotenv(dotenv_path=DOTENV_PATH, override=False)
+load_dotenv(override=False)
 
 app = FastAPI(title="Prolix API", version="0.1.0")
 app.mount("/web-static", StaticFiles(directory="app/static/web"), name="web-static")
@@ -33,6 +38,39 @@ grounder = GroundingService(provider=grounding_provider)
 retrieval = RetrievalService(corpus_dir="corpus")
 drift = DriftEngine()
 narrator = NarrationService()
+logger = logging.getLogger(__name__)
+
+
+def _env_debug_payload() -> dict[str, bool | int]:
+    openai_key = os.getenv("OPENAI_API_KEY", "").strip()
+    vision_key = os.getenv("VISION_GROUNDING_API_KEY", "").strip()
+    return {
+        "openai_key_present": bool(openai_key),
+        "openai_key_length": len(openai_key),
+        "vision_key_present": bool(vision_key),
+        "vision_key_length": len(vision_key),
+    }
+
+
+@app.on_event("startup")
+def startup_diagnostics() -> None:
+    payload = _env_debug_payload()
+    logger.info(
+        "OPENAI_API_KEY present? %s length=%s",
+        payload["openai_key_present"],
+        payload["openai_key_length"],
+    )
+    logger.info(
+        "VISION_GROUNDING_API_KEY present? %s length=%s",
+        payload["vision_key_present"],
+        payload["vision_key_length"],
+    )
+
+
+# DEV ONLY — remove/secure before deployment.
+@app.get("/api/debug/env")
+def debug_env() -> dict[str, bool | int]:
+    return _env_debug_payload()
 
 
 class AIRespondRequest(BaseModel):
@@ -101,14 +139,41 @@ async def generate(
         dark_flag = plan.dark_flag
 
     snippets = retrieval.retrieve(grounding.object_label, domain, k=12)
-    narration = narrator.narrate(
-        object_label=grounding.object_label,
-        descriptors=grounding.scene_descriptors,
-        vector_domain=domain,
-        path=concept_path,
-        snippets=snippets,
-        safety_redirect=grounding.safety_face_or_plate,
-    )
+    try:
+        narration = narrator.narrate(
+            object_label=grounding.object_label,
+            descriptors=grounding.scene_descriptors,
+            vector_domain=domain,
+            path=concept_path,
+            snippets=snippets,
+            safety_redirect=grounding.safety_face_or_plate,
+        )
+    except OpenAIClientError as exc:
+        if exc.error_type == "openai_401":
+            message = "OPENAI_API_KEY not loaded or invalid."
+        elif exc.error_type == "missing_key":
+            message = "OPENAI_API_KEY not loaded."
+        else:
+            message = exc.message
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "status": "error",
+                "error_type": exc.error_type,
+                "message": message,
+                "upstream_status_code": exc.status_code,
+            },
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "status": "error",
+                "error_type": "upstream_error",
+                "message": "Failed to generate narration from upstream model.",
+                "upstream_status_code": None,
+            },
+        ) from exc
     trace = TraceRecord(
         object_label=grounding.object_label,
         vector_domain=domain,
