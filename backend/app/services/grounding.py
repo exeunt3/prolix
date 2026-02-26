@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import imghdr
 from dataclasses import dataclass
 
@@ -10,6 +11,13 @@ from app.models import GroundingResult
 @dataclass
 class GroundingService:
     confidence_threshold: float = 0.45
+
+    def _decode_image(self, image_b64: str) -> bytes:
+        candidate = image_b64.strip()
+        missing_padding = len(candidate) % 4
+        if missing_padding:
+            candidate += "=" * (4 - missing_padding)
+        return base64.b64decode(candidate, validate=False)
 
     def ground(self, image_b64: str | None, tap_x: float, tap_y: float) -> GroundingResult:
         # MVP deterministic placeholder for vision label extraction.
@@ -22,7 +30,10 @@ class GroundingService:
         confidence = 0.40
         safety = False
         if image_b64:
-            raw = base64.b64decode(image_b64, validate=False)
+            try:
+                raw = self._decode_image(image_b64)
+            except (ValueError, binascii.Error):
+                raw = b""
             kind = imghdr.what(None, raw)
             if kind:
                 confidence = 0.62
