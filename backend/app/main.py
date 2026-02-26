@@ -26,6 +26,7 @@ from app.services.narration import NarrationService
 from app.services.retrieval import RetrievalService
 
 DOTENV_PATH = Path(__file__).resolve().parents[1] / ".env"
+DOTENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 if DOTENV_PATH.exists():
     load_dotenv(dotenv_path=DOTENV_PATH, override=False)
 load_dotenv(override=False)
