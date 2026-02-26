@@ -32,6 +32,13 @@ npm install
 npm run start
 ```
 
+Or from the repository root:
+
+```bash
+npm install
+npm run dev
+```
+
 Set API endpoint when running on device/simulator:
 
 ```bash

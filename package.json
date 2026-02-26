@@ -1,0 +1,10 @@
+{
+  "name": "prolix",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix mobile run start",
+    "start": "npm --prefix mobile run start",
+    "android": "npm --prefix mobile run android",
+    "ios": "npm --prefix mobile run ios"
+  }
+}
