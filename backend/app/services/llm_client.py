@@ -18,6 +18,16 @@ class LLMClient(Protocol):
 
 
 @dataclass(slots=True)
+class OpenAIClientError(RuntimeError):
+    message: str
+    error_type: str
+    status_code: int | None = None
+
+    def __str__(self) -> str:
+        return self.message
+
+
+@dataclass(slots=True)
 class ChatCompletionLLMClient:
     api_key: str
     model: str
@@ -27,7 +37,7 @@ class ChatCompletionLLMClient:
 
     @classmethod
     def from_env(cls) -> ChatCompletionLLMClient | None:
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = os.getenv("OPENAI_API_KEY", "").strip()
         if not api_key:
             return None
         model = os.getenv("NARRATION_MODEL", "gpt-4o-mini")
@@ -40,8 +50,16 @@ class ChatCompletionLLMClient:
         if httpx is None:
             raise RuntimeError("httpx is required for ChatCompletionLLMClient")
 
+        api_key = self.api_key.strip()
+        if not api_key:
+            raise OpenAIClientError(
+                message="OPENAI_API_KEY is missing. Set it in backend/.env before calling OpenAI.",
+                error_type="missing_key",
+                status_code=None,
+            )
+
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
         }
         payload = {
@@ -58,11 +76,27 @@ class ChatCompletionLLMClient:
             try:
                 with httpx.Client(timeout=self.timeout_s) as client:
                     response = client.post(self.endpoint, headers=headers, json=payload)
+                if response.status_code == 401:
+                    raise OpenAIClientError(
+                        message="OpenAI 401 Unauthorized: OPENAI_API_KEY not loaded or invalid.",
+                        error_type="openai_401",
+                        status_code=401,
+                    )
                 if response.status_code in {429, 500, 502, 503, 504}:
-                    raise RuntimeError(f"Transient provider error ({response.status_code})")
+                    raise OpenAIClientError(
+                        message=f"OpenAI transient error ({response.status_code}).",
+                        error_type="upstream_error",
+                        status_code=response.status_code,
+                    )
                 response.raise_for_status()
                 data = response.json()
                 return data["choices"][0]["message"]["content"]
+            except OpenAIClientError as exc:
+                last_error = exc
+                if exc.error_type in {"openai_401", "missing_key"} or attempt >= self.max_retries:
+                    break
+                backoff = min(2 ** (attempt - 1), 4) + random.random() * 0.2
+                time.sleep(backoff)
             except (httpx.TimeoutException, httpx.HTTPError, KeyError, RuntimeError) as exc:
                 last_error = exc
                 if attempt >= self.max_retries:
@@ -70,4 +104,6 @@ class ChatCompletionLLMClient:
                 backoff = min(2 ** (attempt - 1), 4) + random.random() * 0.2
                 time.sleep(backoff)
 
+        if isinstance(last_error, OpenAIClientError):
+            raise last_error
         raise RuntimeError("Chat completion failed after retries") from last_error
