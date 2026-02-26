@@ -27,6 +27,23 @@ function updateGenerateState() {
   generateButton.disabled = !(selectedFile && tap) || isGenerating;
 }
 
+async function fetchAiReply(text) {
+  const response = await fetch('/api/ai/respond', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!response.ok) {
+    const errorPayload = await response.json().catch(() => null);
+    const detail = errorPayload?.detail || 'AI response failed.';
+    throw new Error(detail);
+  }
+
+  const payload = await response.json();
+  return payload.reply;
+}
+
 async function submitGenerate() {
   if (!selectedFile || !tap || isGenerating) {
     return;
@@ -49,7 +66,8 @@ async function submitGenerate() {
     }
 
     const payload = await response.json();
-    paragraphEl.textContent = payload.paragraph_text;
+    const aiReply = await fetchAiReply(payload.paragraph_text);
+    paragraphEl.textContent = aiReply;
     traceId = payload.trace_id;
     output.hidden = false;
     setStatus('Generated.');
@@ -122,7 +140,8 @@ deepenButton.addEventListener('click', async () => {
   }
 
   const payload = await response.json();
-  paragraphEl.textContent = payload.paragraph_text;
+  const aiReply = await fetchAiReply(payload.paragraph_text);
+  paragraphEl.textContent = aiReply;
   traceId = payload.trace_id;
   setStatus('Deeper.');
 });
