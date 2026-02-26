@@ -1,4 +1,7 @@
+import base64
 import os
+import struct
+import zlib
 
 import httpx
 from fastapi.testclient import TestClient
@@ -15,10 +18,24 @@ from app.main import app
 client = TestClient(app)
 
 
+def _png_bytes(w: int = 320, h: int = 240) -> bytes:
+    raw = (b"\x00" + b"\x78\x5a\x46" * w) * h
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+
+    ihdr = struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b"")
+
+
+def _image_b64() -> str:
+    return base64.b64encode(_png_bytes()).decode("ascii")
+
+
 def test_generate_contract() -> None:
     resp = client.post(
         "/generate",
-        data={"tap_x": 0.3, "tap_y": 0.7, "image_b64": "dGlyZSB3aXJl"},
+        data={"tap_x": 0.3, "tap_y": 0.7, "image_b64": _image_b64()},
     )
     assert resp.status_code == 200
     payload = resp.json()
@@ -31,7 +48,7 @@ def test_generate_contract() -> None:
 def test_deepen_contract() -> None:
     generated = client.post(
         "/generate",
-        data={"tap_x": 0.4, "tap_y": 0.5, "image_b64": "bGVhZiBvYmplY3Q="},
+        data={"tap_x": 0.4, "tap_y": 0.5, "image_b64": _image_b64()},
     ).json()
     resp = client.post("/deepen", json={"trace_id": generated["trace_id"]})
     assert resp.status_code == 200
@@ -39,14 +56,13 @@ def test_deepen_contract() -> None:
     assert payload["trace_id"] != generated["trace_id"]
 
 
-def test_safety_redirection() -> None:
+def test_generate_rejects_missing_grounding_pack() -> None:
     resp = client.post(
         "/generate",
-        data={"tap_x": 0.1, "tap_y": 0.2, "image_b64": "ZmFjZSBwbGF0ZQ=="},
+        data={"tap_x": 0.1, "tap_y": 0.2, "image_b64": "not-an-image"},
     )
-    assert resp.status_code == 200
-    text = resp.json()["paragraph_text"].lower()
-    assert "dossier" in text or "anonymity" in text
+    assert resp.status_code == 422
+    assert resp.json()["detail"]["error_type"] == "missing_grounding_pack"
 
 
 def test_web_app_shell() -> None:
