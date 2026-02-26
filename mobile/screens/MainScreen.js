@@ -21,12 +21,26 @@ export default function MainScreen() {
   const [loading, setLoading] = useState(false);
   const fade = useMemo(() => new Animated.Value(0), []);
 
+  const resetForImage = (uri) => {
+    setImageUri(uri);
+    setParagraph('');
+    setTraceId(null);
+    fade.setValue(0);
+  };
+
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8, base64: false });
     if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-      setParagraph('');
-      setTraceId(null);
+      resetForImage(result.assets[0].uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) return;
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8, base64: false });
+    if (!result.canceled) {
+      resetForImage(result.assets[0].uri);
     }
   };
 
@@ -66,7 +80,10 @@ export default function MainScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Prolix</Text>
-      <Pressable onPress={pickImage} style={styles.pickButton}><Text style={styles.pickText}>Select Photo</Text></Pressable>
+      <View style={styles.buttonRow}>
+        <Pressable onPress={takePhoto} style={styles.secondaryButton}><Text style={styles.pickText}>Capture Photo</Text></Pressable>
+        <Pressable onPress={pickImage} style={styles.secondaryButton}><Text style={styles.pickText}>Select Photo</Text></Pressable>
+      </View>
       {imageUri && (
         <Pressable onPress={generate}>
           <Image source={{ uri: imageUri }} style={styles.image} />
@@ -89,10 +106,9 @@ export default function MainScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 18, backgroundColor: '#0B0B0D' },
   title: { color: '#ece5d4', fontSize: 34, marginBottom: 14, fontFamily: 'serif' },
-  pickButton: { padding: 12, backgroundColor: '#262428', borderRadius: 8, marginBottom: 12 },
   pickText: { color: '#ece5d4', textAlign: 'center' },
   image: { width: 300, height: 300, borderRadius: 10, marginBottom: 12 },
   paragraph: { color: '#ece5d4', lineHeight: 24, fontSize: 17, fontFamily: 'serif' },
-  buttonRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  buttonRow: { flexDirection: 'row', gap: 10, marginTop: 12, marginBottom: 12 },
   secondaryButton: { flex: 1, padding: 10, backgroundColor: '#1a1a1d', borderRadius: 8 },
 });

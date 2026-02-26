@@ -27,15 +27,15 @@ DOMAIN_WEIGHTS = {
 }
 
 ATTRACTORS = {
-    VectorDomain.HERESY_SECTS: "Bogomils",
-    VectorDomain.PHYSICS_PARADOXES: "quantum suicide",
-    VectorDomain.COSMOLOGY: "holographic principle",
-    VectorDomain.PLANT_AGENCY: "corn is growing us",
-    VectorDomain.COSMOLOGY_MYTH: "Egyptian cosmology motifs",
-    VectorDomain.DISTRIBUTED_INTELLIGENCE: "distributed brains of octopi",
-    VectorDomain.OBSCURE_HISTORY_AGENTS: "Napoleonic courier networks",
-    VectorDomain.MYSTERIOUS_EVENTS: "Pauli Effect",
-    VectorDomain.CULT_PRACTICES: "pre-modern bear cults",
+    VectorDomain.HERESY_SECTS: ["Bogomils"],
+    VectorDomain.PHYSICS_PARADOXES: ["quantum suicide", "the number 137", "holographic principle"],
+    VectorDomain.COSMOLOGY: ["holographic principle"],
+    VectorDomain.PLANT_AGENCY: ["corn is growing us"],
+    VectorDomain.COSMOLOGY_MYTH: ["Egyptian cosmology motifs"],
+    VectorDomain.DISTRIBUTED_INTELLIGENCE: ["distributed brains of octopi"],
+    VectorDomain.OBSCURE_HISTORY_AGENTS: ["Napoleonic-era triple-agent courier networks", "pseudo-Frederick"],
+    VectorDomain.MYSTERIOUS_EVENTS: ["Pauli Effect"],
+    VectorDomain.CULT_PRACTICES: ["pre-modern bear cults"],
 }
 
 
@@ -53,18 +53,19 @@ class DriftEngine:
         return random.choices(domains, weights=weights, k=1)[0]
 
     def plan(self, anchor: str, domain: VectorDomain, force_safe: bool = False) -> DriftPlan:
-        attractor = ATTRACTORS.get(domain)
-        if attractor in self.recent_attractors:
-            attractor = None
+        candidates = [entry for entry in ATTRACTORS.get(domain, []) if entry not in self.recent_attractors]
+        attractor = random.choice(candidates) if candidates else None
         dark_flag = domain in DARK_DOMAINS and not force_safe
+        domain_signal = domain.value.lower().replace("_", " ")
         chain = [
             Hop(node=anchor, rel="is_a"),
             Hop(node=f"{anchor} substrate", rel="made_of"),
             Hop(node="extraction and process chemistry", rel="derived_from"),
-            Hop(node=f"{domain.value.lower().replace('_', ' ')} dynamics", rel="enabled_by"),
-            Hop(node="networked system behavior", rel="embedded_in"),
+            Hop(node=f"{domain_signal} dynamics", rel="enabled_by"),
+            Hop(node=f"{domain_signal} system behavior", rel="embedded_in"),
             Hop(node="micro-to-macro scale inversion", rel="scaled_to"),
-            Hop(node="observer entanglement", rel="resembles"),
+            Hop(node=f"{domain_signal} observer entanglement", rel="resembles"),
+            Hop(node=f"{domain_signal} constraints", rel="constrained_by"),
         ]
         if attractor:
             chain.append(Hop(node=attractor, rel="historically_entangled_with"))
@@ -81,7 +82,11 @@ class DriftEngine:
             raise ValueError("Invalid hop count")
         if not any(h.rel == "scaled_to" for h in chain):
             raise ValueError("Missing scale shift")
-        domain_hits = sum(1 for hop in chain[2:] if domain.value.lower().replace("_", " ")[:8] in hop.node)
-        if domain_hits < 1:
-            # Ensure vector commitment on deterministic skeleton.
-            chain[3] = Hop(node=f"{domain.value.lower().replace('_', ' ')} commitments", rel="enabled_by")
+        domain_signal = domain.value.lower().replace("_", " ")
+        hops_after_intro = chain[2:]
+        domain_hits = sum(1 for hop in hops_after_intro if domain_signal[:10] in hop.node)
+        commitment_ratio = domain_hits / max(1, len(hops_after_intro))
+        if commitment_ratio < 0.6:
+            for idx in range(3, len(chain) - 1):
+                if chain[idx].rel != "scaled_to":
+                    chain[idx] = Hop(node=f"{domain_signal} {chain[idx].node}", rel=chain[idx].rel)

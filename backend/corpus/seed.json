@@ -1,17 +1,104 @@
 [
-  {"title":"Entropy basics","excerpt":"Entropy tracks the number of possible arrangements and the energetic price of reducing uncertainty.","domain_tag":"THERMODYNAMICS_ENTROPY","source_id":"core-001"},
-  {"title":"Vulcanization","excerpt":"Rubber becomes durable through sulfur cross-linking, binding elasticity to industrial chemistry.","domain_tag":"CHEMISTRY_TRANSFORMATION","source_id":"core-002"},
-  {"title":"Quantum suicide thought experiment","excerpt":"A paradox about observer continuity under branching outcomes in many-worlds interpretations.","domain_tag":"PHYSICS_PARADOXES","source_id":"core-003"},
-  {"title":"Holographic principle","excerpt":"Some gravitational systems can be described by degrees of freedom projected on a lower-dimensional boundary.","domain_tag":"COSMOLOGY","source_id":"core-004"},
-  {"title":"Octopus cognition","excerpt":"Octopi distribute problem-solving across arms and nervous tissue, diffusing control beyond a single center.","domain_tag":"DISTRIBUTED_INTELLIGENCE","source_id":"core-005"},
-  {"title":"Evolutionary signaling","excerpt":"Signals evolve when receivers and senders co-adapt under ecological constraints.","domain_tag":"EVOLUTIONARY_SIGNALING","source_id":"core-006"},
-  {"title":"Agricultural cybernetics","excerpt":"Corn can be framed as a species that recruits human labor and infrastructure for its propagation.","domain_tag":"PLANT_AGENCY","source_id":"core-007"},
-  {"title":"Feedback loops","excerpt":"Control systems compare outcomes against targets and continuously correct behavior.","domain_tag":"FEEDBACK_CONTROL","source_id":"core-008"},
-  {"title":"Emergence and observation","excerpt":"Coherent patterns arise from local rules, then reshape what observers think is fundamental.","domain_tag":"EMERGENCE_OBSERVER","source_id":"core-009"},
-  {"title":"Logistics as infrastructure","excerpt":"Ports, roads, standards, and schedules make objects legible to global movement.","domain_tag":"INFRASTRUCTURE_LOGISTICS","source_id":"core-010"},
-  {"title":"Napoleonic courier networks","excerpt":"Information moved through layered messengers, double loyalties, and delay tactics.","domain_tag":"OBSCURE_HISTORY_AGENTS","source_id":"core-011"},
-  {"title":"Bogomil movements","excerpt":"Dualist Christian sects challenged imperial orthodoxy through alternate metaphysical hierarchies.","domain_tag":"HERESY_SECTS","source_id":"core-012"},
-  {"title":"Pauli Effect","excerpt":"A folklore claim that theorist Wolfgang Pauli's presence caused laboratory equipment failures.","domain_tag":"MYSTERIOUS_EVENTS","source_id":"core-013"},
-  {"title":"Egyptian cosmology","excerpt":"Creation myths stage order as an emergent island in surrounding waters of potential.","domain_tag":"COSMOLOGY_MYTH","source_id":"core-014"},
-  {"title":"Bear ceremonial complexes","excerpt":"Several pre-modern groups treated bears as kin, adversary, and sacred intermediary.","domain_tag":"CULT_PRACTICES","source_id":"core-015"}
+  {
+    "title": "Entropy basics",
+    "excerpt": "Entropy tracks the number of possible arrangements and the energetic price of reducing uncertainty.",
+    "domain_tag": "THERMODYNAMICS_ENTROPY",
+    "source_id": "core-001"
+  },
+  {
+    "title": "Vulcanization",
+    "excerpt": "Rubber becomes durable through sulfur cross-linking, binding elasticity to industrial chemistry.",
+    "domain_tag": "CHEMISTRY_TRANSFORMATION",
+    "source_id": "core-002"
+  },
+  {
+    "title": "Quantum suicide thought experiment",
+    "excerpt": "A paradox about observer continuity under branching outcomes in many-worlds interpretations.",
+    "domain_tag": "PHYSICS_PARADOXES",
+    "source_id": "core-003"
+  },
+  {
+    "title": "Holographic principle",
+    "excerpt": "Some gravitational systems can be described by degrees of freedom projected on a lower-dimensional boundary.",
+    "domain_tag": "COSMOLOGY",
+    "source_id": "core-004"
+  },
+  {
+    "title": "Octopus cognition",
+    "excerpt": "Octopi distribute problem-solving across arms and nervous tissue, diffusing control beyond a single center.",
+    "domain_tag": "DISTRIBUTED_INTELLIGENCE",
+    "source_id": "core-005"
+  },
+  {
+    "title": "Evolutionary signaling",
+    "excerpt": "Signals evolve when receivers and senders co-adapt under ecological constraints.",
+    "domain_tag": "EVOLUTIONARY_SIGNALING",
+    "source_id": "core-006"
+  },
+  {
+    "title": "Agricultural cybernetics",
+    "excerpt": "Corn can be framed as a species that recruits human labor and infrastructure for its propagation.",
+    "domain_tag": "PLANT_AGENCY",
+    "source_id": "core-007"
+  },
+  {
+    "title": "Feedback loops",
+    "excerpt": "Control systems compare outcomes against targets and continuously correct behavior.",
+    "domain_tag": "FEEDBACK_CONTROL",
+    "source_id": "core-008"
+  },
+  {
+    "title": "Emergence and observation",
+    "excerpt": "Coherent patterns arise from local rules, then reshape what observers think is fundamental.",
+    "domain_tag": "EMERGENCE_OBSERVER",
+    "source_id": "core-009"
+  },
+  {
+    "title": "Logistics as infrastructure",
+    "excerpt": "Ports, roads, standards, and schedules make objects legible to global movement.",
+    "domain_tag": "INFRASTRUCTURE_LOGISTICS",
+    "source_id": "core-010"
+  },
+  {
+    "title": "Napoleonic courier networks",
+    "excerpt": "Information moved through layered messengers, double loyalties, and delay tactics.",
+    "domain_tag": "OBSCURE_HISTORY_AGENTS",
+    "source_id": "core-011"
+  },
+  {
+    "title": "Bogomil movements",
+    "excerpt": "Dualist Christian sects challenged imperial orthodoxy through alternate metaphysical hierarchies.",
+    "domain_tag": "HERESY_SECTS",
+    "source_id": "core-012"
+  },
+  {
+    "title": "Pauli Effect",
+    "excerpt": "A folklore claim that theorist Wolfgang Pauli's presence caused laboratory equipment failures.",
+    "domain_tag": "MYSTERIOUS_EVENTS",
+    "source_id": "core-013"
+  },
+  {
+    "title": "Egyptian cosmology",
+    "excerpt": "Creation myths stage order as an emergent island in surrounding waters of potential.",
+    "domain_tag": "COSMOLOGY_MYTH",
+    "source_id": "core-014"
+  },
+  {
+    "title": "Bear ceremonial complexes",
+    "excerpt": "Several pre-modern groups treated bears as kin, adversary, and sacred intermediary.",
+    "domain_tag": "CULT_PRACTICES",
+    "source_id": "core-015"
+  },
+  {
+    "title": "Pseudo-Frederick imposture",
+    "excerpt": "Competing claimants could weaponize resemblance, seals, and narrative timing to manufacture legitimacy.",
+    "domain_tag": "OBSCURE_HISTORY_AGENTS",
+    "source_id": "core-016"
+  },
+  {
+    "title": "137 in physics culture",
+    "excerpt": "The number 137 recurs as a near-mythic shorthand around the fine-structure constant and theory limits.",
+    "domain_tag": "PHYSICS_PARADOXES",
+    "source_id": "core-017"
+  }
 ]
