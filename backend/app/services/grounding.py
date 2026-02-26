@@ -35,22 +35,12 @@ class VisionProviderSettings:
 
     @classmethod
     def from_env(cls) -> "VisionProviderSettings":
-        required = {
-            "VISION_GROUNDING_API_KEY": os.getenv("VISION_GROUNDING_API_KEY"),
-            "VISION_GROUNDING_MODEL": os.getenv("VISION_GROUNDING_MODEL"),
-            "VISION_GROUNDING_ENDPOINT": os.getenv("VISION_GROUNDING_ENDPOINT"),
-        }
-        missing = [name for name, value in required.items() if not value]
-        if missing:
-            missing_str = ", ".join(sorted(missing))
-            raise RuntimeError(f"Missing required grounding provider settings: {missing_str}")
-
         timeout_raw = os.getenv("VISION_GROUNDING_TIMEOUT_SECONDS", "8")
         retries_raw = os.getenv("VISION_GROUNDING_MAX_RETRIES", "2")
         return cls(
-            api_key=required["VISION_GROUNDING_API_KEY"] or "",
-            model=required["VISION_GROUNDING_MODEL"] or "",
-            endpoint=required["VISION_GROUNDING_ENDPOINT"] or "",
+            api_key=os.getenv("VISION_GROUNDING_API_KEY", ""),
+            model=os.getenv("VISION_GROUNDING_MODEL", "gpt-4o-mini"),
+            endpoint=os.getenv("VISION_GROUNDING_ENDPOINT", "https://api.openai.com/v1/responses"),
             timeout_seconds=max(0.5, float(timeout_raw)),
             max_retries=max(0, int(retries_raw)),
         )
@@ -61,6 +51,9 @@ class OpenAIVisionGroundingProvider:
     settings: VisionProviderSettings
 
     def identify_object(self, image_bytes: bytes, tap_x: float, tap_y: float) -> ProviderGroundingResponse:
+        if not self.settings.api_key:
+            raise RuntimeError("VISION_GROUNDING_API_KEY is required to call the vision provider")
+
         image_b64 = base64.b64encode(image_bytes).decode("utf-8")
         prompt = (
             "You are grounding a user tap on an image. "
