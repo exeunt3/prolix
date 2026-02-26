@@ -46,3 +46,13 @@ def test_safety_redirection() -> None:
     assert resp.status_code == 200
     text = resp.json()["paragraph_text"].lower()
     assert "dossier" in text or "anonymity" in text
+
+
+def test_web_app_shell() -> None:
+    resp = client.get("/web")
+    assert resp.status_code == 200
+    assert "<title>Prolix Web</title>" in resp.text
+
+    script_resp = client.get("/web-static/app.js")
+    assert script_resp.status_code == 200
+    assert "fetch('/generate'" in script_resp.text

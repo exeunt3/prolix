@@ -24,6 +24,17 @@ cd backend
 pytest
 ```
 
+## Web app quickstart
+
+The backend now serves a browser client at `/web` that talks to the same `/generate` and `/deepen` endpoints.
+
+```bash
+cd backend
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Then open `http://localhost:8000/web`.
+
 ## Mobile quickstart
 
 ```bash

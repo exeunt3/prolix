@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prolix Web</title>
+    <link rel="stylesheet" href="/web-static/styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Prolix</h1>
+      <p class="subtitle">Upload a photo, tap the image, and generate a destabilizing genealogy.</p>
+
+      <div class="controls">
+        <label class="picker">
+          <span>Select or Capture Photo</span>
+          <input id="imageInput" type="file" accept="image/*" capture="environment" />
+        </label>
+      </div>
+
+      <button id="generateButton" class="button" disabled>Tap image to generate</button>
+
+      <div class="imageWrap">
+        <img id="preview" alt="Selected preview" hidden />
+        <div id="tapMarker" hidden></div>
+      </div>
+
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+
+      <section id="output" hidden>
+        <p id="paragraph"></p>
+        <div class="controls">
+          <button id="deepenButton" class="button">Go Deeper</button>
+          <button id="surfaceButton" class="button secondary">Return to Surface</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="/web-static/app.js" defer></script>
+  </body>
+</html>
