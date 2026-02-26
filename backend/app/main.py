@@ -3,6 +3,8 @@ from __future__ import annotations
 import binascii
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.db.storage import TraceStore
 from app.models import DeepenRequest, GenerateResponse, Hop, TraceRecord, VectorDomain
@@ -17,6 +19,7 @@ from app.services.narration import NarrationService
 from app.services.retrieval import RetrievalService
 
 app = FastAPI(title="Prolix API", version="0.1.0")
+app.mount("/web-static", StaticFiles(directory="app/static/web"), name="web-static")
 store = TraceStore()
 grounding_provider = OpenAIVisionGroundingProvider(settings=VisionProviderSettings.from_env())
 grounder = GroundingService(provider=grounding_provider)
@@ -39,6 +42,11 @@ def _safety_path(anchor: str) -> list[Hop]:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/web")
+def web_app() -> FileResponse:
+    return FileResponse("app/static/web/index.html")
 
 
 @app.post("/generate", response_model=GenerateResponse)
