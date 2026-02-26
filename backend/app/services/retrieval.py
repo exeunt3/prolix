@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.models import RetrievalSnippet, VectorDomain
+from app.models import RetrievalBundle, RetrievalSnippet, VectorDomain
 
 
 class RetrievalService:
@@ -41,3 +41,10 @@ class RetrievalService:
                 }
             ]
         return [RetrievalSnippet(**doc) for doc in top]
+
+
+    def build_bundle(self, snippets: list[RetrievalSnippet]) -> RetrievalBundle:
+        return RetrievalBundle(
+            fragment_ids=[snippet.source_id for snippet in snippets],
+            fragments=[f"{snippet.title}: {snippet.excerpt}" for snippet in snippets],
+        )
