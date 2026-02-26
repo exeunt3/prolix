@@ -11,6 +11,7 @@ const surfaceButton = document.getElementById('surfaceButton');
 let selectedFile = null;
 let traceId = null;
 let tap = null;
+let isGenerating = false;
 
 function setStatus(text) {
   statusEl.textContent = text;
@@ -23,7 +24,41 @@ function clearOutput() {
 }
 
 function updateGenerateState() {
-  generateButton.disabled = !(selectedFile && tap);
+  generateButton.disabled = !(selectedFile && tap) || isGenerating;
+}
+
+async function submitGenerate() {
+  if (!selectedFile || !tap || isGenerating) {
+    return;
+  }
+
+  isGenerating = true;
+  setStatus('Generating…');
+  updateGenerateState();
+
+  try {
+    const form = new FormData();
+    form.append('tap_x', String(tap.x));
+    form.append('tap_y', String(tap.y));
+    form.append('image', selectedFile, selectedFile.name || 'upload.jpg');
+
+    const response = await fetch('/generate', { method: 'POST', body: form });
+    if (!response.ok) {
+      setStatus('Generation failed.');
+      return;
+    }
+
+    const payload = await response.json();
+    paragraphEl.textContent = payload.paragraph_text;
+    traceId = payload.trace_id;
+    output.hidden = false;
+    setStatus('Generated.');
+  } catch (error) {
+    setStatus('Generation failed.');
+  } finally {
+    isGenerating = false;
+    updateGenerateState();
+  }
 }
 
 function placeTapMarker(clientX, clientY) {
@@ -61,36 +96,10 @@ imageInput.addEventListener('change', () => {
 
 preview.addEventListener('click', (event) => {
   placeTapMarker(event.clientX, event.clientY);
-  setStatus('Ready to generate.');
+  submitGenerate();
 });
 
-generateButton.addEventListener('click', async () => {
-  if (!selectedFile || !tap) {
-    return;
-  }
-
-  setStatus('Generating…');
-  generateButton.disabled = true;
-
-  const form = new FormData();
-  form.append('tap_x', String(tap.x));
-  form.append('tap_y', String(tap.y));
-  form.append('image', selectedFile, selectedFile.name || 'upload.jpg');
-
-  const response = await fetch('/generate', { method: 'POST', body: form });
-  if (!response.ok) {
-    setStatus('Generation failed.');
-    updateGenerateState();
-    return;
-  }
-
-  const payload = await response.json();
-  paragraphEl.textContent = payload.paragraph_text;
-  traceId = payload.trace_id;
-  output.hidden = false;
-  setStatus('Generated.');
-  updateGenerateState();
-});
+generateButton.addEventListener('click', submitGenerate);
 
 deepenButton.addEventListener('click', async () => {
   if (!traceId) {
